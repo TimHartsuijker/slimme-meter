@@ -18,8 +18,8 @@ const char* pass = "Kilowattuur";
 char INSERT_DATA[] = "INSERT INTO test (value) VALUES ('%d')";
 char REQUEST_DATA[] = "SELECT `value` FROM `test`";
 char query[128];
-int Baka = random(1, 10);
 bool sussy = true;
+
 
 
 
@@ -47,6 +47,7 @@ void executeInsertQuery()
 
   if(conn.connect(server_addr, 3306, user, password, db)) 
   {
+    int Baka = random(1, 10);
     MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
     sprintf(query, INSERT_DATA, Baka);
     cur_mem->execute(query);
@@ -106,16 +107,16 @@ void setup()
 
 void loop() 
 {
-  if(sussy == true)
-  {
-    executeInsertQuery();
-    sussy = false;
-    delay(2000);
-  } 
-  else if(sussy == false)
-  {
-      executeSelectQuery();
-      sussy = true;
-      delay(2000);
-  }    
+  // if(sussy == true)
+  // {
+  //   executeInsertQuery();
+  //   sussy = false;
+  //   delay(2000);
+  // } 
+  // else if(sussy == false)
+  // {
+  //     executeSelectQuery();
+  //     sussy = true;
+  //     delay(2000);
+  // }    
 }
