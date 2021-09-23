@@ -19,6 +19,9 @@ char INSERT_DATA[] = "INSERT INTO test (value) VALUES ('%d')";
 char REQUEST_DATA[] = "SELECT `value` FROM `test`";
 char query[128];
 int Baka = random(1, 10);
+bool sussy = true;
+
+
 
 WiFiClient client;          
 MySQL_Connection conn((Client *)&client);
@@ -59,7 +62,7 @@ void executeInsertQuery()
 // after this, it disconnects from the database.
 void executeSelectQuery()
 {
-  if(conn.connect(server_addr, 3306, user, password, db)) 
+  if(conn.connect(server_addr, 3306, user, password, db))
   {
     row_values *row = NULL;
     long value;
@@ -99,10 +102,20 @@ void setup()
 {
   Serial.begin(115200);
   WiFiConnect();
-  executeSelectQuery();
 }
 
 void loop() 
 {
-    
+  if(sussy == true)
+  {
+    executeInsertQuery();
+    sussy = false;
+    delay(2000);
+  } 
+  else if(sussy == false)
+  {
+      executeSelectQuery();
+      sussy = true;
+      delay(2000);
+  }    
 }
