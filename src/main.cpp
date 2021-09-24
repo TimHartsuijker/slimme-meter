@@ -18,10 +18,6 @@ const char* pass = "Kilowattuur";
 char INSERT_DATA[] = "INSERT INTO test (value) VALUES ('%d')";
 char REQUEST_DATA[] = "SELECT `value` FROM `test`";
 char query[128];
-bool sussy = true;
-
-
-
 
 WiFiClient client;          
 MySQL_Connection conn((Client *)&client);
@@ -103,20 +99,11 @@ void setup()
 {
   Serial.begin(115200);
   WiFiConnect();
+  executeInsertQuery();
+  executeSelectQuery();
 }
 
 void loop() 
 {
-  // if(sussy == true)
-  // {
-  //   executeInsertQuery();
-  //   sussy = false;
-  //   delay(2000);
-  // } 
-  // else if(sussy == false)
-  // {
-  //     executeSelectQuery();
-  //     sussy = true;
-  //     delay(2000);
-  // }    
+
 }
