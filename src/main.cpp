@@ -17,7 +17,8 @@ long mETHT = 0; //Meterstand Elektra - teruglevering hoog tarief
 long mEAV = 0;  //Meterstand Elektra - actueel verbruik
 long mEAT = 0;  //Meterstand Elektra - actueel teruglevering
 float mG = 0;   //Meterstand Gas
-int usage;                                            
+int usage;  
+String kolom;
 
 //database information
 IPAddress server_addr(128,199,52,194);  
@@ -30,7 +31,7 @@ const char* ssid = "OmniEnergy";
 const char* pass = "Kilowattuur";
 
 //query information
-char INSERT_DATA[] = "INSERT INTO test (value) VALUES ('%d')";
+char INSERT_DATA[] = "INSERT INTO test ('%s') VALUES ('%d')";
 char REQUEST_DATA[] = "SELECT `value` FROM `test`";
 char query[128];
 
@@ -107,9 +108,7 @@ void setup()
   pinMode(RXD2, INPUT);
   Serial.begin(115200);
   Serial1.begin(115200, SERIAL_8N1, RXD2);
-  // WiFiConnect();
-  // ExecuteInsertQuery();
-  // ExecuteSelectQuery();
+  WiFiConnect();
 }
 
 void loop() 
@@ -117,7 +116,7 @@ void loop()
 long tl = 0;
 long tld =0;
  
-  if (Serial.available()) 
+  if (Serial1.available()) 
   {
     input = Serial1.read();
    
@@ -140,6 +139,7 @@ long tld =0;
         if (mEVLT > 0) 
         {
           Serial.print("Elektra - meterstand verbruik LAAG tarief (Wh): ");
+          kolom = "mEVLT";
           usage = mEVLT;
           Serial.println(mEVLT);
           ExecuteInsertQuery();
@@ -151,9 +151,11 @@ long tld =0;
       if (sscanf(buffer,"1-0:1.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) 
       {
         mEVHT = tl * 1000 + tld;
+
         if (mEVHT > 0) 
         {
           Serial.print("Elektra - meterstand verbruik HOOG tarief (Wh): ");
+          kolom = "mEVHT";
           usage = mEVHT;
           Serial.println(mEVHT);
           ExecuteInsertQuery();
@@ -168,6 +170,7 @@ long tld =0;
         if (mEAV > 0) 
         {
           Serial.print("Elektra - actueel verbruik (W): ");
+          kolom = "mEAV";
           usage = mEAV;
           Serial.println(mEAV);
           ExecuteInsertQuery();
@@ -182,6 +185,7 @@ long tld =0;
         if (mETLT > 0) 
         {
           Serial.print("Elektra - meterstand teruglevering LAAG tarief (Wh): ");
+          kolom = "mETLT";
           usage = mETLT;
           Serial.println(mETLT);
           ExecuteInsertQuery();
@@ -196,6 +200,7 @@ long tld =0;
         if (mETHT > 0) 
         {
           Serial.print("Elektra - meterstand teruglevering HOOG tarief (Wh): ");
+          kolom = "METHT";
           usage = mETHT;
           Serial.println(mETHT);
           ExecuteInsertQuery();
@@ -210,6 +215,7 @@ long tld =0;
         if (mEAT > 0) 
         {
           Serial.print("Elektra - actueel teruglevering (W): ");
+          kolom = "mEAT";
           usage = mEAT;
           Serial.println(mEAT);
           ExecuteInsertQuery();
@@ -226,6 +232,7 @@ long tld =0;
         {
           mG = float ( tl * 1000 + tld ) / 1000;
           Serial.print("Gas - meterstand (m3): ");
+          kolom = "mG";
           usage = mG;
           Serial.println(mG);
           ExecuteInsertQuery();
