@@ -2,8 +2,8 @@
 #include <WiFi.h>
 #include <MySQL_Connection.h>
 #include <MySQL_Cursor.h>
+
 #define RXD2 5
-#define TXD2 4
 
 char input; // inkomende seriele data (byte)
 bool readnextLine = false;
@@ -16,7 +16,8 @@ long mETLT = 0; //Meterstand Elektra - teruglevering laag tarief
 long mETHT = 0; //Meterstand Elektra - teruglevering hoog tarief
 long mEAV = 0;  //Meterstand Elektra - actueel verbruik
 long mEAT = 0;  //Meterstand Elektra - actueel teruglevering
-float mG = 0;   //Meterstand Gas                                            
+float mG = 0;   //Meterstand Gas
+int usage;                                            
 
 //database information
 IPAddress server_addr(128,199,52,194);  
@@ -51,15 +52,14 @@ void WiFiConnect()
 // this function creates a database connection, 
 // executes a query to insert values into the database. 
 // after this, it disconnects from the database.
-void executeInsertQuery()
+void ExecuteInsertQuery()
 {
   Serial.println("Connecting to database");
 
   if(conn.connect(server_addr, 3306, user, password, db)) 
   {
-    int Baka = random(1, 10);
     MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
-    sprintf(query, INSERT_DATA, Baka);
+    sprintf(query, INSERT_DATA, usage);
     cur_mem->execute(query);
     delete cur_mem;
     conn.close();
@@ -71,7 +71,7 @@ void executeInsertQuery()
 // this function creates a database connection, 
 // executes a query to select all information from the database. 
 // after this, it disconnects from the database.
-void executeSelectQuery()
+void ExecuteSelectQuery()
 {
   if(conn.connect(server_addr, 3306, user, password, db))
   {
@@ -104,13 +104,12 @@ void executeSelectQuery()
 
 void setup() 
 {
+  pinMode(RXD2, INPUT);
   Serial.begin(115200);
-  Serial1.begin(115200, SERIAL_8N1, RXD2, TXD2);
-  Serial.println("Serial Txd is on pin: "+String(TX));
-  Serial.println("Serial Rxd is on pin: "+String(RX));
+  Serial1.begin(115200, SERIAL_8N1, RXD2);
   // WiFiConnect();
-  // executeInsertQuery();
-  // executeSelectQuery();
+  // ExecuteInsertQuery();
+  // ExecuteSelectQuery();
 }
 
 void loop() 
@@ -118,91 +117,118 @@ void loop()
 long tl = 0;
 long tld =0;
  
-  if (Serial.available()) {
-    input = Serial.read();
+  if (Serial.available()) 
+  {
+    input = Serial1.read();
    
     // --- 7 bits instelling ---
     input &= ~(1 << 7);
     char inChar = (char)input;
     // --- 7 bits instelling ---
  
-    //Serial.print(input); //Debug
- 
     // Vul buffer tot en met een nieuwe lijn (\n)
     buffer[bufpos] = input&127;
     bufpos++;
  
-    if (input == '\n') { // we hebben een lijn binnen (gegevens tot \n)
+    if (input == '\n') 
+    { // we hebben een lijn binnen (gegevens tot \n)
  
       // 1-0:1.8.1 = Elektra verbruik laag tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) {
+      if (sscanf(buffer,"1-0:1.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) 
+      {
         mEVLT = tl * 1000 + tld;
-        if (mEVLT > 0) {
+        if (mEVLT > 0) 
+        {
           Serial.print("Elektra - meterstand verbruik LAAG tarief (Wh): ");
+          usage = mEVLT;
           Serial.println(mEVLT);
+          ExecuteInsertQuery();
           mEVLT = 0;
         }
       }
  
       // 1-0:1.8.2 = Elektra verbruik hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) {
+      if (sscanf(buffer,"1-0:1.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) 
+      {
         mEVHT = tl * 1000 + tld;
-        if (mEVHT > 0) {
+        if (mEVHT > 0) 
+        {
           Serial.print("Elektra - meterstand verbruik HOOG tarief (Wh): ");
+          usage = mEVHT;
           Serial.println(mEVHT);
+          ExecuteInsertQuery();
           mEVHT = 0;
         }
       }
  
       // 1-0:1.7.0 = Elektra actueel verbruik (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.7.0(%ld.%ld%*s" , &tl , &tld) >0 ) {
+      if (sscanf(buffer,"1-0:1.7.0(%ld.%ld%*s" , &tl , &tld) >0 ) 
+      {
         mEAV = tl * 1000 + tld * 10;
-        if (mEAV > 0) {
+        if (mEAV > 0) 
+        {
           Serial.print("Elektra - actueel verbruik (W): ");
+          usage = mEAV;
           Serial.println(mEAV);
+          ExecuteInsertQuery();
           mEAV = 0;
         }
       }
  
       // 1-0:2.8.1 = Elektra teruglevering hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) {
+      if (sscanf(buffer,"1-0:2.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) 
+      {
         mETLT = tl * 1000 + tld;
-        if (mETLT > 0) {
+        if (mETLT > 0) 
+        {
           Serial.print("Elektra - meterstand teruglevering LAAG tarief (Wh): ");
+          usage = mETLT;
           Serial.println(mETLT);
+          ExecuteInsertQuery();
           mETLT = 0;
         }
       }
  
       // 1-0:2.8.2 = Elektra teruglevering hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) {
+      if (sscanf(buffer,"1-0:2.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) 
+      {
         mETHT = tl * 1000 + tld;
-        if (mETHT > 0) {
+        if (mETHT > 0) 
+        {
           Serial.print("Elektra - meterstand teruglevering HOOG tarief (Wh): ");
+          usage = mETHT;
           Serial.println(mETHT);
+          ExecuteInsertQuery();
           mETHT = 0;
         }
       }
  
       // 1-0:2.7.0 = Elektra actueel teruglevering (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.7.0(%ld.%ld%*s" , &tl , &tld) >0  ) {
+      if (sscanf(buffer,"1-0:2.7.0(%ld.%ld%*s" , &tl , &tld) >0  ) 
+      {
         mEAT = tl * 1000 + tld * 10;
-        if (mEAT > 0) {
+        if (mEAT > 0) 
+        {
           Serial.print("Elektra - actueel teruglevering (W): ");
+          usage = mEAT;
           Serial.println(mEAT);
+          ExecuteInsertQuery();
           mEAT = 0;
         }
       }
  
       // 0-1:24.3.0 = Gas (DSMR v4.0)
-      if (sscanf(buffer,"0-1:24.3.0(%6ld%4ld%*s" , &tl, &tld) > 0  ) {
+      if (sscanf(buffer,"0-1:24.3.0(%6ld%4ld%*s" , &tl, &tld) > 0  ) 
         readnextLine = true; // we moeten de volgende lijn hebben
-      }
-      if (readnextLine){
-        if (sscanf(buffer,"(%ld.%ld%*s" , &tl, &tld) >0  ) {
+      if (readnextLine)
+      {
+        if (sscanf(buffer,"(%ld.%ld%*s" , &tl, &tld) >0  )
+        {
           mG = float ( tl * 1000 + tld ) / 1000;
           Serial.print("Gas - meterstand (m3): ");
+          usage = mG;
           Serial.println(mG);
+          ExecuteInsertQuery();
           Serial.println("");
           readnextLine = false;
         }
@@ -210,7 +236,7 @@ long tld =0;
  
       // Maak de buffer weer leeg (hele array)
       for (int i=0; i<75; i++)
-      { buffer[i] = 0;}
+        buffer[i] = 0;
       bufpos = 0;
     }
   }
