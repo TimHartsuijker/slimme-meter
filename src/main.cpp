@@ -3,7 +3,7 @@
 #include <MySQL_Connection.h>
 #include <MySQL_Cursor.h>
 
-#define RXD2 5
+#define RXD 27
 
 char input; // inkomende seriele data (byte)
 bool readnextLine = false;
@@ -105,20 +105,18 @@ void ExecuteSelectQuery()
 
 void setup() 
 {
-  pinMode(RXD2, INPUT);
   Serial.begin(115200);
-  Serial1.begin(115200, SERIAL_8N1, RXD2);
   WiFiConnect();
 }
 
 void loop() 
 {
 long tl = 0;
-long tld =0;
- 
-  if (Serial1.available()) 
+long tld =0; 
+  if (Serial.available()) 
   {
-    input = Serial1.read();
+    input = Serial.read();
+    
    
     // --- 7 bits instelling ---
     input &= ~(1 << 7);
