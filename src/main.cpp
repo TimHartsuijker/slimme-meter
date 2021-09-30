@@ -3,7 +3,10 @@
 #include <MySQL_Connection.h>
 #include <MySQL_Cursor.h>
 
-#define RXD 27
+
+HardwareSerial bt(2);
+
+#define RX 3
 
 char input; // inkomende seriele data (byte)
 bool readnextLine = false;
@@ -103,137 +106,99 @@ void ExecuteSelectQuery()
   Serial.println("Connection failed.");
 }
 
-void setup() 
-{
+void setup() {
   Serial.begin(115200);
-  WiFiConnect();
+  pinMode(RX, INPUT);
 }
 
-void loop() 
-{
+void loop() {
 long tl = 0;
-long tld =0; 
-  if (Serial.available()) 
-  {
-    input = Serial.read();
-    
-   
+long tld =0;
+
+  if (Serial.available() > 0) {
+    input = Serial.read(); 
     // --- 7 bits instelling ---
     input &= ~(1 << 7);
     char inChar = (char)input;
     // --- 7 bits instelling ---
  
-    // Vul buffer tot en met een nieuwe lijn (\n)
-    buffer[bufpos] = input&127;
-    bufpos++;
+    Serial.print(input); //Debug
  
-    if (input == '\n') 
-    { // we hebben een lijn binnen (gegevens tot \n)
+    // Vul buffer tot en met een nieuwe lijn (\n)
+   buffer[bufpos] = input&127;
+   bufpos++;
+ 
+    if (input == '\n') { // we hebben een lijn binnen (gegevens tot \n)
  
       // 1-0:1.8.1 = Elektra verbruik laag tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) 
-      {
+      if (sscanf(buffer,"1-0:1.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) {
         mEVLT = tl * 1000 + tld;
-        if (mEVLT > 0) 
-        {
+        if (mEVLT > 0) {
           Serial.print("Elektra - meterstand verbruik LAAG tarief (Wh): ");
-          kolom = "mEVLT";
-          usage = mEVLT;
           Serial.println(mEVLT);
-          ExecuteInsertQuery();
           mEVLT = 0;
         }
       }
  
       // 1-0:1.8.2 = Elektra verbruik hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) 
-      {
+      if (sscanf(buffer,"1-0:1.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) {
         mEVHT = tl * 1000 + tld;
-
-        if (mEVHT > 0) 
-        {
+        if (mEVHT > 0) {
           Serial.print("Elektra - meterstand verbruik HOOG tarief (Wh): ");
-          kolom = "mEVHT";
-          usage = mEVHT;
           Serial.println(mEVHT);
-          ExecuteInsertQuery();
           mEVHT = 0;
         }
       }
  
       // 1-0:1.7.0 = Elektra actueel verbruik (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.7.0(%ld.%ld%*s" , &tl , &tld) >0 ) 
-      {
+      if (sscanf(buffer,"1-0:1.7.0(%ld.%ld%*s" , &tl , &tld) >0 ) {
         mEAV = tl * 1000 + tld * 10;
-        if (mEAV > 0) 
-        {
+        if (mEAV > 0) {
           Serial.print("Elektra - actueel verbruik (W): ");
-          kolom = "mEAV";
-          usage = mEAV;
           Serial.println(mEAV);
-          ExecuteInsertQuery();
           mEAV = 0;
         }
       }
  
       // 1-0:2.8.1 = Elektra teruglevering hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) 
-      {
+      if (sscanf(buffer,"1-0:2.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) {
         mETLT = tl * 1000 + tld;
-        if (mETLT > 0) 
-        {
+        if (mETLT > 0) {
           Serial.print("Elektra - meterstand teruglevering LAAG tarief (Wh): ");
-          kolom = "mETLT";
-          usage = mETLT;
           Serial.println(mETLT);
-          ExecuteInsertQuery();
           mETLT = 0;
         }
       }
  
       // 1-0:2.8.2 = Elektra teruglevering hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) 
-      {
+      if (sscanf(buffer,"1-0:2.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) {
         mETHT = tl * 1000 + tld;
-        if (mETHT > 0) 
-        {
+        if (mETHT > 0) {
           Serial.print("Elektra - meterstand teruglevering HOOG tarief (Wh): ");
-          kolom = "METHT";
-          usage = mETHT;
           Serial.println(mETHT);
-          ExecuteInsertQuery();
           mETHT = 0;
         }
       }
  
       // 1-0:2.7.0 = Elektra actueel teruglevering (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.7.0(%ld.%ld%*s" , &tl , &tld) >0  ) 
-      {
+      if (sscanf(buffer,"1-0:2.7.0(%ld.%ld%*s" , &tl , &tld) >0  ) {
         mEAT = tl * 1000 + tld * 10;
-        if (mEAT > 0) 
-        {
+        if (mEAT > 0) {
           Serial.print("Elektra - actueel teruglevering (W): ");
-          kolom = "mEAT";
-          usage = mEAT;
           Serial.println(mEAT);
-          ExecuteInsertQuery();
           mEAT = 0;
         }
       }
  
       // 0-1:24.3.0 = Gas (DSMR v4.0)
-      if (sscanf(buffer,"0-1:24.3.0(%6ld%4ld%*s" , &tl, &tld) > 0  ) 
+      if (sscanf(buffer,"0-1:24.3.0(%6ld%4ld%*s" , &tl, &tld) > 0  ) {
         readnextLine = true; // we moeten de volgende lijn hebben
-      if (readnextLine)
-      {
-        if (sscanf(buffer,"(%ld.%ld%*s" , &tl, &tld) >0  )
-        {
+      }
+      if (readnextLine){
+        if (sscanf(buffer,"(%ld.%ld%*s" , &tl, &tld) >0  ) {
           mG = float ( tl * 1000 + tld ) / 1000;
           Serial.print("Gas - meterstand (m3): ");
-          kolom = "mG";
-          usage = mG;
           Serial.println(mG);
-          ExecuteInsertQuery();
           Serial.println("");
           readnextLine = false;
         }
@@ -241,7 +206,7 @@ long tld =0;
  
       // Maak de buffer weer leeg (hele array)
       for (int i=0; i<75; i++)
-        buffer[i] = 0;
+      { buffer[i] = 0;}
       bufpos = 0;
     }
   }
