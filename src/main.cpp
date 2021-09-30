@@ -34,7 +34,7 @@ const char* ssid = "OmniEnergy";
 const char* pass = "Kilowattuur";
 
 //query information
-char INSERT_DATA[] = "INSERT INTO test ('%s') VALUES ('%d')";
+char INSERT_DATA[] = "INSERT INTO test (%s) VALUES (%d)";
 char REQUEST_DATA[] = "SELECT `value` FROM `test`";
 char query[128];
 
@@ -63,7 +63,7 @@ void ExecuteInsertQuery()
   if(conn.connect(server_addr, 3306, user, password, db)) 
   {
     MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
-    sprintf(query, INSERT_DATA, usage);
+    sprintf(query, INSERT_DATA, kolom, usage);
     cur_mem->execute(query);
     delete cur_mem;
     conn.close();
@@ -108,7 +108,7 @@ void ExecuteSelectQuery()
 
 void setup() {
   Serial.begin(115200);
-  pinMode(RX, INPUT);
+  WiFiConnect();
 }
 
 void loop() {
@@ -134,6 +134,9 @@ long tld =0;
       if (sscanf(buffer,"1-0:1.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) {
         mEVLT = tl * 1000 + tld;
         if (mEVLT > 0) {
+          kolom = "mEVLT";
+          usage = mEVLT;
+          ExecuteInsertQuery();
           Serial.print("Elektra - meterstand verbruik LAAG tarief (Wh): ");
           Serial.println(mEVLT);
           mEVLT = 0;
@@ -144,6 +147,9 @@ long tld =0;
       if (sscanf(buffer,"1-0:1.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) {
         mEVHT = tl * 1000 + tld;
         if (mEVHT > 0) {
+          kolom = "mEVHT";
+          usage = mEVHT;
+          ExecuteInsertQuery();
           Serial.print("Elektra - meterstand verbruik HOOG tarief (Wh): ");
           Serial.println(mEVHT);
           mEVHT = 0;
@@ -154,6 +160,9 @@ long tld =0;
       if (sscanf(buffer,"1-0:1.7.0(%ld.%ld%*s" , &tl , &tld) >0 ) {
         mEAV = tl * 1000 + tld * 10;
         if (mEAV > 0) {
+          kolom = "mEAV";
+          usage = mEAV;
+          ExecuteInsertQuery();
           Serial.print("Elektra - actueel verbruik (W): ");
           Serial.println(mEAV);
           mEAV = 0;
@@ -164,6 +173,9 @@ long tld =0;
       if (sscanf(buffer,"1-0:2.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) {
         mETLT = tl * 1000 + tld;
         if (mETLT > 0) {
+          kolom = "mETLT";
+          usage = mETLT;
+          ExecuteInsertQuery();
           Serial.print("Elektra - meterstand teruglevering LAAG tarief (Wh): ");
           Serial.println(mETLT);
           mETLT = 0;
@@ -174,6 +186,9 @@ long tld =0;
       if (sscanf(buffer,"1-0:2.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) {
         mETHT = tl * 1000 + tld;
         if (mETHT > 0) {
+          kolom = "mETHT";
+          usage = mETHT;
+          ExecuteInsertQuery();
           Serial.print("Elektra - meterstand teruglevering HOOG tarief (Wh): ");
           Serial.println(mETHT);
           mETHT = 0;
@@ -184,6 +199,9 @@ long tld =0;
       if (sscanf(buffer,"1-0:2.7.0(%ld.%ld%*s" , &tl , &tld) >0  ) {
         mEAT = tl * 1000 + tld * 10;
         if (mEAT > 0) {
+          kolom = "mEAT";
+          usage = mEAT;
+          ExecuteInsertQuery();
           Serial.print("Elektra - actueel teruglevering (W): ");
           Serial.println(mEAT);
           mEAT = 0;
@@ -191,12 +209,15 @@ long tld =0;
       }
  
       // 0-1:24.3.0 = Gas (DSMR v4.0)
-      if (sscanf(buffer,"0-1:24.3.0(%6ld%4ld%*s" , &tl, &tld) > 0  ) {
+      if (sscanf(buffer,"0-1:24.2.0(%6ld%4ld%*s" , &tl, &tld) > 0  ) {
         readnextLine = true; // we moeten de volgende lijn hebben
       }
       if (readnextLine){
         if (sscanf(buffer,"(%ld.%ld%*s" , &tl, &tld) >0  ) {
           mG = float ( tl * 1000 + tld ) / 1000;
+          kolom = "mG";
+          usage = mG;
+          ExecuteInsertQuery();
           Serial.print("Gas - meterstand (m3): ");
           Serial.println(mG);
           Serial.println("");
