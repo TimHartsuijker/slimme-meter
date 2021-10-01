@@ -20,23 +20,30 @@ long mETHT = 0; //Meterstand Elektra - teruglevering hoog tarief
 long mEAV = 0;  //Meterstand Elektra - actueel verbruik
 long mEAT = 0;  //Meterstand Elektra - actueel teruglevering
 float mG = 0;   //Meterstand Gas
-int usage;  
-String kolom;
 
-//database information
-IPAddress server_addr(128,199,52,194);  
-char user[] = "tim.hartsuijker";              
-char password[] = "Tim+Hartsuijker";  
-char db[] = "tim.hartsuijker";
+long DatamEVLT;
+long DatamEVHT;
+long DatamETLT;
+long DatamETHT;
+long DatamEAV;
+long DatamEAT;
+float DatamG;
+
+  //database information
+  IPAddress server_addr(128,199,52,194);  
+  char user[] = "tim.hartsuijker";              
+  char password[] = "Tim+Hartsuijker";  
+  char db[] = "tim.hartsuijker";
+
+  //query information
+  char INSERT_DATA[] = "INSERT INTO test (mEVLT, mEVHT, mETLT, mETHT, mEAV, mEAT, mG) VALUES (%d, %d, %d, %d, %d, %d, %d)";
+  char query[128];
 
 // wifi information
 const char* ssid = "OmniEnergy"; 
 const char* pass = "Kilowattuur";
 
-//query information
-char INSERT_DATA[] = "INSERT INTO test (%s) VALUES (%d)";
-char REQUEST_DATA[] = "SELECT `value` FROM `test`";
-char query[128];
+
 
 WiFiClient client;          
 MySQL_Connection conn((Client *)&client);
@@ -58,177 +65,162 @@ void WiFiConnect()
 // after this, it disconnects from the database.
 void ExecuteInsertQuery()
 {
+
+
   Serial.println("Connecting to database");
 
-  if(conn.connect(server_addr, 3306, user, password, db)) 
-  {
+  // if(conn.connect(server_addr, 3306, user, password, db)) 
+  // {
+    Serial.println("beginning insert");
     MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
-    sprintf(query, INSERT_DATA, kolom, usage);
+    sprintf(query, INSERT_DATA, DatamEVLT, DatamEVHT, DatamETLT, DatamETHT, DatamEAV, DatamEAT, DatamG);
+    Serial.println("Starting execute");
     cur_mem->execute(query);
+    Serial.println("executed");
     delete cur_mem;
-    conn.close();
-  }
-  else
-    Serial.println("Connection failed.");
+    // conn.close();
+  // }
+  // else
+  //   Serial.println("Connection failed.");
 }
 
-// this function creates a database connection, 
-// executes a query to select all information from the database. 
-// after this, it disconnects from the database.
-void ExecuteSelectQuery()
+void setup()
 {
-  if(conn.connect(server_addr, 3306, user, password, db))
-  {
-    row_values *row = NULL;
-    long value;
-    int val = 0;
-    delay(1000);
-    MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
-    sprintf(query, REQUEST_DATA);
-    cur_mem->execute(query);
-    column_names *columns = cur_mem->get_columns();
-   do 
-    {
-      row = cur_mem->get_next_row();
-      if (row != NULL) 
-      {
-        value = atol(row->values[0]);
-        Serial.println(atol(row->values[0]));
-        val++;
-      }
-    }while (row != NULL);
-    
-    delete cur_mem;
-    delay(500);
-    conn.close();
-  }
-  else
-  Serial.println("Connection failed.");
-}
-
-void setup() {
   Serial.begin(115200);
   WiFiConnect();
 }
 
-void loop() {
-long tl = 0;
-long tld =0;
+void loop()
+{
 
-  if (Serial.available() > 0) {
+  long tl = 0;
+  long tld =0;
+
+  if (Serial.available() > 0) 
+  {
+    if(!conn.connected())
+    {
+      if(!conn.connect(server_addr, 3306, user, password, db)) 
+        return;
+    }
     input = Serial.read(); 
+
     // --- 7 bits instelling ---
     input &= ~(1 << 7);
     char inChar = (char)input;
     // --- 7 bits instelling ---
  
-    Serial.print(input); //Debug
+    Serial.print(input);
  
     // Vul buffer tot en met een nieuwe lijn (\n)
    buffer[bufpos] = input&127;
    bufpos++;
  
-    if (input == '\n') { // we hebben een lijn binnen (gegevens tot \n)
+    if (input == '\n') 
+    {
  
-      // 1-0:1.8.1 = Elektra verbruik laag tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) {
+      if (sscanf(buffer,"1-0:1.8.1(%ld.%ld%*s" , &tl, &tld)) 
+      {
         mEVLT = tl * 1000 + tld;
-        if (mEVLT > 0) {
-          kolom = "mEVLT";
-          usage = mEVLT;
-          ExecuteInsertQuery();
+        if (mEVLT > 0) 
+        {
+          DatamEVLT = mEVLT;
           Serial.print("Elektra - meterstand verbruik LAAG tarief (Wh): ");
           Serial.println(mEVLT);
           mEVLT = 0;
         }
       }
  
-      // 1-0:1.8.2 = Elektra verbruik hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) {
+      if (sscanf(buffer,"1-0:1.8.2(%ld.%ld%*s" , &tl, &tld)) 
+      {
         mEVHT = tl * 1000 + tld;
-        if (mEVHT > 0) {
-          kolom = "mEVHT";
-          usage = mEVHT;
-          ExecuteInsertQuery();
+        if (mEVHT > 0) 
+        {
+          DatamEVHT = mEVHT;
           Serial.print("Elektra - meterstand verbruik HOOG tarief (Wh): ");
           Serial.println(mEVHT);
           mEVHT = 0;
         }
       }
  
-      // 1-0:1.7.0 = Elektra actueel verbruik (DSMR v4.0)
-      if (sscanf(buffer,"1-0:1.7.0(%ld.%ld%*s" , &tl , &tld) >0 ) {
+      if (sscanf(buffer,"1-0:1.7.0(%ld.%ld%*s" , &tl , &tld)) 
+      {
         mEAV = tl * 1000 + tld * 10;
-        if (mEAV > 0) {
-          kolom = "mEAV";
-          usage = mEAV;
-          ExecuteInsertQuery();
+        if (mEAV > 0) 
+        {
+          DatamEAV = mEAV;
           Serial.print("Elektra - actueel verbruik (W): ");
           Serial.println(mEAV);
           mEAV = 0;
         }
       }
  
-      // 1-0:2.8.1 = Elektra teruglevering hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.8.1(%ld%.%ld%*s" , &tl, &tld) >0 ) {
+      if (sscanf(buffer,"1-0:2.8.1(%ld.%ld%*s" , &tl, &tld)) 
+      {
+
         mETLT = tl * 1000 + tld;
-        if (mETLT > 0) {
-          kolom = "mETLT";
-          usage = mETLT;
-          ExecuteInsertQuery();
+        if (mETLT > 0) 
+        {
+          DatamETLT =mETLT;
           Serial.print("Elektra - meterstand teruglevering LAAG tarief (Wh): ");
           Serial.println(mETLT);
           mETLT = 0;
         }
       }
  
-      // 1-0:2.8.2 = Elektra teruglevering hoog tarief (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.8.2(%ld%.%ld%*s" , &tl, &tld) >0 ) {
+      if (sscanf(buffer,"1-0:2.8.2(%ld.%ld%*s" , &tl, &tld)) 
+      {
         mETHT = tl * 1000 + tld;
-        if (mETHT > 0) {
-          kolom = "mETHT";
-          usage = mETHT;
-          ExecuteInsertQuery();
+        if (mETHT > 0) 
+        {
+          DatamETHT = mETHT;
           Serial.print("Elektra - meterstand teruglevering HOOG tarief (Wh): ");
           Serial.println(mETHT);
           mETHT = 0;
         }
       }
- 
-      // 1-0:2.7.0 = Elektra actueel teruglevering (DSMR v4.0)
-      if (sscanf(buffer,"1-0:2.7.0(%ld.%ld%*s" , &tl , &tld) >0  ) {
+
+      if(sscanf(buffer,"1-0:2.7.0(%ld.%ld%*s" , &tl , &tld)) 
+      {
         mEAT = tl * 1000 + tld * 10;
-        if (mEAT > 0) {
-          kolom = "mEAT";
-          usage = mEAT;
-          ExecuteInsertQuery();
+        if (mEAT > 0) 
+        {
+          DatamEAT = mEAT;
           Serial.print("Elektra - actueel teruglevering (W): ");
           Serial.println(mEAT);
           mEAT = 0;
         }
       }
  
-      // 0-1:24.3.0 = Gas (DSMR v4.0)
-      if (sscanf(buffer,"0-1:24.2.0(%6ld%4ld%*s" , &tl, &tld) > 0  ) {
+      if(sscanf(buffer,"0-1:24.3.0(%6ld%4ld%*s" , &tl, &tld)) 
         readnextLine = true; // we moeten de volgende lijn hebben
-      }
-      if (readnextLine){
-        if (sscanf(buffer,"(%ld.%ld%*s" , &tl, &tld) >0  ) {
+      if (readnextLine)
+      {
+        if(sscanf(buffer,"(%ld.%ld%*s" , &tl, &tld)) 
+        {
           mG = float ( tl * 1000 + tld ) / 1000;
-          kolom = "mG";
-          usage = mG;
-          ExecuteInsertQuery();
+          DatamG = mG;
           Serial.print("Gas - meterstand (m3): ");
           Serial.println(mG);
           Serial.println("");
           readnextLine = false;
         }
       }
- 
+
+
+
+      if(sscanf(buffer,"!%s")) 
+      {
+        if(WiFi.status() == WL_CONNECTED)
+          ExecuteInsertQuery();  
+          conn.close();
+      }
+
       // Maak de buffer weer leeg (hele array)
       for (int i=0; i<75; i++)
-      { buffer[i] = 0;}
+        buffer[i] = 0;
       bufpos = 0;
     }
   }
+  
 }
