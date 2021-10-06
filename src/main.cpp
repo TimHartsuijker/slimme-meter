@@ -3,14 +3,10 @@
 #include <MySQL_Connection.h>
 #include <MySQL_Cursor.h>
 
-
-HardwareSerial bt(2);
-
-#define RX 3
+#define BUFSIZE 75
 
 char input; // inkomende seriele data (byte)
 bool readnextLine = false;
-#define BUFSIZE 75
 char buffer[BUFSIZE]; //Buffer voor seriele data om \n te vinden.
 int bufpos = 0;
 long mEVLT = 0; //Meterstand Elektra - verbruik laag tarief
@@ -29,21 +25,19 @@ long DatamEAV;
 long DatamEAT;
 float DatamG;
 
-  //database information
-  IPAddress server_addr(128,199,52,194);  
-  char user[] = "tim.hartsuijker";              
-  char password[] = "Tim+Hartsuijker";  
-  char db[] = "tim.hartsuijker";
+//database information
+IPAddress server_addr(128,199,52,194);  
+char user[] = "tim.hartsuijker";              
+char password[] = "Tim+Hartsuijker";  
+char db[] = "tim.hartsuijker";
 
-  //query information
-  char INSERT_DATA[] = "INSERT INTO test (mEVLT, mEVHT, mETLT, mETHT, mEAV, mEAT, mG) VALUES (%d, %d, %d, %d, %d, %d, %d)";
-  char query[128];
+//query information
+char INSERT_DATA[] = "INSERT INTO test (mEVLT, mEVHT, mETLT, mETHT, mEAV, mEAT, mG) VALUES (%d, %d, %d, %d, %d, %d, %d)";
+char query[128];
 
 // wifi information
 const char* ssid = "OmniEnergy"; 
 const char* pass = "Kilowattuur";
-
-
 
 WiFiClient client;          
 MySQL_Connection conn((Client *)&client);
@@ -60,28 +54,15 @@ void WiFiConnect()
   Serial.println("WiFi connected.");
 }
 
-// this function creates a database connection, 
+
 // executes a query to insert values into the database. 
 // after this, it disconnects from the database.
 void ExecuteInsertQuery()
 {
-
-
-  Serial.println("Connecting to database");
-
-  // if(conn.connect(server_addr, 3306, user, password, db)) 
-  // {
-    Serial.println("beginning insert");
-    MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
-    sprintf(query, INSERT_DATA, DatamEVLT, DatamEVHT, DatamETLT, DatamETHT, DatamEAV, DatamEAT, DatamG);
-    Serial.println("Starting execute");
-    cur_mem->execute(query);
-    Serial.println("executed");
-    delete cur_mem;
-    // conn.close();
-  // }
-  // else
-  //   Serial.println("Connection failed.");
+  MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
+  sprintf(query, INSERT_DATA, DatamEVLT, DatamEVHT, DatamETLT, DatamETHT, DatamEAV, DatamEAT, DatamG);
+  cur_mem->execute(query);
+  delete cur_mem;
 }
 
 void setup()
@@ -98,19 +79,22 @@ void loop()
 
   if (Serial.available() > 0) 
   {
+    input = Serial.read();
+
     if(!conn.connected())
     {
-      if(!conn.connect(server_addr, 3306, user, password, db)) 
-        return;
+      Serial.println("database not conneted");
+      conn.connect(server_addr, 3306, user, password, db);
+        delay(500);
     }
-    input = Serial.read(); 
-
+    
+    
     // --- 7 bits instelling ---
     input &= ~(1 << 7);
     char inChar = (char)input;
     // --- 7 bits instelling ---
  
-    Serial.print(input);
+    // Serial.print(input);
  
     // Vul buffer tot en met een nieuwe lijn (\n)
    buffer[bufpos] = input&127;
@@ -192,28 +176,19 @@ void loop()
         }
       }
  
-      if(sscanf(buffer,"0-1:24.3.0(%6ld%4ld%*s" , &tl, &tld)) 
-        readnextLine = true; // we moeten de volgende lijn hebben
-      if (readnextLine)
+      if(sscanf(buffer,"0-1:24.2.1(%ld.%c" , &tl, &tld)) 
       {
-        if(sscanf(buffer,"(%ld.%ld%*s" , &tl, &tld)) 
-        {
-          mG = float ( tl * 1000 + tld ) / 1000;
-          DatamG = mG;
-          Serial.print("Gas - meterstand (m3): ");
-          Serial.println(mG);
-          Serial.println("");
-          readnextLine = false;
-        }
+        mG = float (tl * 1000 + tld) / 1000;
+        DatamG = mG;
+        Serial.print("Gas - meterstand (m3): ");
+        Serial.println(mG);
+        mG = 0;
       }
-
-
 
       if(sscanf(buffer,"!%s")) 
       {
-        if(WiFi.status() == WL_CONNECTED)
-          ExecuteInsertQuery();  
-          conn.close();
+        ExecuteInsertQuery();
+        conn.close();      
       }
 
       // Maak de buffer weer leeg (hele array)
@@ -222,5 +197,4 @@ void loop()
       bufpos = 0;
     }
   }
-  
 }
